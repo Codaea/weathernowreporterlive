@@ -1,7 +1,8 @@
 import random
 from typing import List
 from datetime import date, datetime
-from game import WeatherDay
+# Updated import to resolve circular dependency
+from weather_day import WeatherCondition, WeatherDay
 # File that handles weather instruments
 
 class Calendar:
@@ -77,7 +78,41 @@ class Cricket:
         
 
 class Jerry:
+    def predict(self, weather_day: WeatherDay) -> str:
+        """Jerry's prediction is based on the current weather. He is 15% accurate on even days"""
+        if weather_day.date.day % 2 == 0:
+            # even day, 15% accurate
+            if random.random() < 0.15:
+                return f"Jerry predicts {weather_day.condition}"
+            else:
+                return f"Jerry predicts {random.choice(['sunny', 'cloudy', 'rainy', 'stormy', 'snowy'])}"
+        else:
+            # odd day, completely random
+            return f"Jerry predicts {random.choice(['sunny', 'cloudy', 'rainy', 'stormy', 'snowy'])}"
     pass
+
+class Grandma:
+    def predict(self, weather_day: WeatherDay) -> str:
+        """grandma's prediction of the current weather. She only knows when its going to rain, when her knee hurts, otherwise its just junk"""
+        if weather_day.condition == WeatherCondition.RAINY:
+            return "My knee hurts"
+        else:
+            i = random.randint(0,5)
+            # random junk to throw them off the trail
+            if i == 0:
+                return "I have a feeling its going to rain"
+            elif i == 1:
+                return "I went to the store, but they didn't have any bread, so I bought some milk instead. I hope it doesn't spoil"
+            elif i == 2:
+                return "I have a feeling its going to be sunny"
+            elif i == 3:
+                return "I love this weather, I hope it stays like this"
+            elif i == 4:
+                return "Its so cold outside, I hope it doesn't snow"
+            elif i == 5:
+                return "I have a feeling its going to be snowy"
+            else:
+                return "I think I hit something with my car, but I can't find it. I hope it doesn't cause any problems"
 
 class Rock:
     """Predicts the previous day's weather. On the inital start, there is no previous day. in this case, weather stone shows as no weather"""
@@ -105,5 +140,5 @@ class Rock:
             prediction = "The rock is confused" # we shouldn't be able to get here
 
         # Set current day to previous, for next prediction
-
+        self.previous_weather_day = weather_day
         return prediction

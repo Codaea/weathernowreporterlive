@@ -1,13 +1,13 @@
 from __future__ import annotations # forward refrences for type hinting
 from typing import List
-from utils import clear_screen, clamp
-from instruments import Calendar, Cricket, EightBall, Jerry, Rock
+from utils import clear_screen, input_valid_float, input_valid_condition
+from instruments import Calendar, Cricket, EightBall, Jerry, Grandma,Rock
+from weather_day import WeatherDay, WeatherCondition
 import time
 import math
 import random
-from datetime import date, datetime
+from datetime import datetime
 import csv
-from enum import Enum
 
 
 
@@ -27,24 +27,56 @@ class WeatherGame:
         self.Cricket = Cricket(days_inacurate=[0, 6]) # Mondays and Sundays are inacurate
         self.EightBall = EightBall()
         self.Jerry = Jerry()
+        self.Grandma = Grandma()
         self.Rock = Rock()
-        
-        # Main game loop
-        for i in range(game_length):
+        self.total_score = 0
+
+        self.play()
+
+    def play(self):
+        """Main game loop. handles each day and adds score to total_score"""
+
+        for i in range(self.game_length):
             clear_screen()
-            print(f"Day {i+1} of {game_length}")
+            print(f"Day {i+1} of {self.game_length}")
 
             # get weather from weather engine -> csv
             weather = self.weather_engine.get_day()
 
             # Generate Instrument readings from real weather for next day
-            self.Calendar.format(weather.date, weather.season)
-            self.Cricket.predict(weather)
-            self.EightBall.predict()
-            self.Jerry.predict(weather)
-            self.Rock.predict(weather)
-            # score prediction
+            calendar = self.Calendar.format(weather.date, weather.season)
+            cricket = self.Cricket.predict(weather)
+            eightball = self.EightBall.predict()
+            jerry = self.Jerry.predict(weather)
+            grandma = self.Grandma.predict(weather)
+            rock = self.Rock.predict(weather)
 
+            # show the player the instrument readings and ask for a prediction
+            clear_screen()
+            print(f"Day {i+1} of {self.game_length}")
+            print("******************")
+            print(f"Date: {calendar}")
+            print(f"# of cricket chirps in the last minute: {cricket}")
+            print(f"EightBall Reading: {eightball}")
+            print(f"Jerry's Personal Opinion: {jerry}")
+            print(f"Grandma's Text: {grandma}")
+            print(f"Weather Rock: {rock}")
+
+            temp_prediction = input_valid_float("What is your prediction for the temperature tomorrow? ")
+            condition_prediction = input_valid_condition("What is your prediction for the weather condition tomorrow? (sunny/cloudy/rainy/stormy/snowy) ")
+            # score prediction
+            temp_score = max(0, 100 - abs(temp_prediction - weather.tempature))
+            condition_score = 100 if condition_prediction == weather.condition else 0
+            score = temp_score + condition_score
+            self.total_score += score
+            print(f"Your temperature prediction was off by {abs(temp_prediction - weather.tempature)} degrees, giving you a score of {temp_score} for the temperature prediction.")
+            print(f"Your condition prediction was {'correct' if condition_prediction == weather.condition else 'incorrect'}, giving you a score of {condition_score} for the condition prediction.")
+            print(f"Your total score for the day is {score}.")
+            print(f"Your total score so far is {self.total_score}.")
+            
+            input("Press enter to continue to the next day...")
+            
+            
     def tutorial(self):
         """Displays intro and story if the player has not played before. displays on the has_played_before variable"""
         if not self.has_played_before:
@@ -62,28 +94,6 @@ so your going to have to make do without any (good) instruments.
                   """)
             time.sleep(2)
             print("Welcome to WeatherNOW! In this game, you will be a weather reporter trying to predict the weather for the next week. Each day, you will be given some information about the current weather and you will have to make a prediction for the next day. Your score will be based on how accurate your predictions are. Good luck!")
-
-# A single days weather
-class WeatherDay:
-    def __init__(self, tempature: float, condition: WeatherCondition, date: date, season: str):
-        self.tempature = tempature
-        self.condition = condition
-        self.date = date
-        self.season = season
-
-    def __str__(self):
-        """Debug function for printing to string"""
-        return f"Temperature: {self.tempature}, Condition: {self.condition.value}"
-    
-    pass
-
-# Define an Enum for weather conditions
-class WeatherCondition(Enum):
-    SUNNY = "sunny"
-    CLOUDY = "cloudy"
-    RAINY = "rainy"
-    STORMY = "stormy"
-    SNOWY = "snowy"
 
 class WeatherEngine:
     def __init__(self, weather_data_file: str = "weather_data.csv"):
@@ -111,21 +121,25 @@ class WeatherEngine:
             reader = csv.reader(f, delimiter=',')
 
             for row in reader:
-                date = datetime.fromisoformat(row[0])
-                season = row[1]
-                temp = float(row[2])
-                condition = row[3]
-                weather_day = WeatherDay(tempature=temp, condition=WeatherCondition(condition), date=date, season=season)
+                # Skip empty rows and CSV headers.
+                if not row or row[0].strip().lower() == "date":
+                    continue
+
+                # Skip malformed rows instead of crashing the whole game.
+                if len(row) < 4:
+                    continue
+
+                day_date = datetime.fromisoformat(row[0].strip())
+                season = row[1].strip()
+                temp = float(row[2].strip())
+                condition = row[3].strip().lower()
+                weather_day = WeatherDay(
+                    tempature=temp,
+                    condition=WeatherCondition(condition),
+                    date=day_date,
+                    season=season,
+                )
 
                 self.weather_days.append(weather_day)
             return
         return
-# Player prediction object
-class Forcast:
-    def __init__(self, tempature: float, condition: WeatherCondition):
-        self.tempature = tempature
-        self.condition = condition
-
-    def score(self, weather_day: WeatherDay):
-        # handles scoring from the weather day.
-        pass
